@@ -20,6 +20,7 @@ stages:
     pool:
       vmImage: ubuntu-latest
     steps:
+    #Task To build the image using docker file
     - task: Docker@2
       displayName: Build an image
       inputs:
@@ -27,28 +28,27 @@ stages:
         dockerfile: '$(Build.SourcesDirectory)/sampleapp/Dockerfile'
         tags: |
           $(tag)
+     #  Task to build the image and push the image to azure container registry (acr) using the already created service connection named  servconnacr which connects devops to docker hub  
     - task: Docker@2
       inputs:
         containerRegistry: 'servconnacr'
         repository: 'seethal/samplekubernetes'
         command: 'buildAndPush'
         Dockerfile: '**/Dockerfile'
+      #  Task to build the image and pushthe imageto my private docker hub using the already created service connection named  dockerserviceconnection which connects devops to acr server  
     - task: Docker@2
       inputs:
         containerRegistry: 'dockerserviceconnection'
         repository: 'seethal1/samplekubernetes'
         command: 'buildAndPush'
         Dockerfile: '**/Dockerfile'
-    - task: CopyFiles@2
-      inputs:
-        SourceFolder: 'sampleapp'
-        Contents: '*.yaml'
-        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    # This is to publish build artifacts so that we can copy the deployment.yaml file (later) which contains the code to deploy to Azure Kubernetes Service    
     - task: PublishBuildArtifacts@1
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
         ArtifactName: 'drop'
         publishLocation: 'Container'
+        #This is to copy the all .yaml files (build artifactss) to artifacts
     - task: CopyPublishBuildArtifacts@1
       inputs:
         Contents: '*.yaml'
