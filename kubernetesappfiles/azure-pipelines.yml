@@ -1,0 +1,56 @@
+# Docker
+# Build a Docker image
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/sampleapp/Dockerfile'
+        tags: |
+          $(tag)
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'servconnacr'
+        repository: 'seethal/samplekubernetes'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'dockerserviceconnection'
+        repository: 'seethal1/samplekubernetes'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: 'sampleapp'
+        Contents: '*.yaml'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+    - task: CopyPublishBuildArtifacts@1
+      inputs:
+        Contents: '*.yaml'
+        ArtifactName: 'yamlartifacts'
+        ArtifactType: 'Container'
